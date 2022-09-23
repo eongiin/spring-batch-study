@@ -9,5 +9,12 @@ spring:
       initialize-schema: always
     job:
       names: ${job.name:NONE}
+  jpa:
+    generate-ddl: true
+    hibernate:
+      ddl-auto: update
+      naming:
+        physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+    show-sql: true
 
 
