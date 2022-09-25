@@ -1,19 +1,19 @@
 package com.example.demo.application.job;
 
+import com.example.demo.application.job.param.CreateArticleJobParam;
 import com.example.demo.application.model.ArticleModel;
 import com.example.demo.domain.entity.Article;
-import com.example.demo.domain.repository.ArticleRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.configuration.annotation.JobBuilderFactory;
+import org.springframework.batch.core.configuration.annotation.JobScope;
 import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
+import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.core.launch.support.RunIdIncrementer;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.ItemWriter;
-import org.springframework.batch.item.data.RepositoryItemWriter;
-import org.springframework.batch.item.data.builder.RepositoryItemWriterBuilder;
 import org.springframework.batch.item.file.FlatFileItemReader;
 import org.springframework.batch.item.file.builder.FlatFileItemReaderBuilder;
 import org.springframework.batch.item.file.mapping.BeanWrapperFieldSetMapper;
@@ -30,7 +30,7 @@ import java.time.LocalDateTime;
 public class CreateArticleJobConfig {
     private final JobBuilderFactory jobBuilderFactory;
     private final StepBuilderFactory stepBuilderFactory;
-    private final ArticleRepository articleRepository;
+    private final CreateArticleJobParam createArticleJobParam;
     private final JdbcTemplate jdbcTemplate;
 
     @Bean
@@ -42,12 +42,13 @@ public class CreateArticleJobConfig {
     }
 
     @Bean
+    @JobScope
     public Step createArticleStep() {
         return stepBuilderFactory.get("createArticleStep")
                 .<ArticleModel, Article>chunk(1000)
                 .reader(createArticleReader())
                 .processor(createArticleProcessor())
-                .writer(createArticleRepositoryWriter())
+                .writer(createArticleWriter())
                 .build();
     }
 
@@ -55,7 +56,9 @@ public class CreateArticleJobConfig {
      * Articles.csv 파일 읽기
      */
     @Bean
+    @StepScope
     public FlatFileItemReader<ArticleModel> createArticleReader() {
+        log.info("PARAM!!!!!!!!!!! {}", createArticleJobParam.getName());
         return new FlatFileItemReaderBuilder<ArticleModel>()
                 .name("createArticleReader")
                 .resource(new ClassPathResource("Articles.csv"))
@@ -93,12 +96,5 @@ public class CreateArticleJobConfig {
                     ps.setObject(2, article.getContent());
                     ps.setObject(3, article.getCreatedAt());
                 });
-    }
-
-    @Bean
-    public RepositoryItemWriter<Article> createArticleRepositoryWriter() {
-        return new RepositoryItemWriterBuilder<Article>()
-                .repository(articleRepository)
-                .build();
     }
 }
