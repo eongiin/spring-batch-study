@@ -12,6 +12,8 @@ import org.springframework.batch.core.configuration.annotation.StepBuilderFactor
 import org.springframework.batch.core.launch.support.RunIdIncrementer;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.ItemWriter;
+import org.springframework.batch.item.data.RepositoryItemWriter;
+import org.springframework.batch.item.data.builder.RepositoryItemWriterBuilder;
 import org.springframework.batch.item.file.FlatFileItemReader;
 import org.springframework.batch.item.file.builder.FlatFileItemReaderBuilder;
 import org.springframework.batch.item.file.mapping.BeanWrapperFieldSetMapper;
@@ -45,7 +47,7 @@ public class CreateArticleJobConfig {
                 .<ArticleModel, Article>chunk(1000)
                 .reader(createArticleReader())
                 .processor(createArticleProcessor())
-                .writer(createArticleWriter())
+                .writer(createArticleRepositoryWriter())
                 .build();
     }
 
@@ -91,5 +93,12 @@ public class CreateArticleJobConfig {
                     ps.setObject(2, article.getContent());
                     ps.setObject(3, article.getCreatedAt());
                 });
+    }
+
+    @Bean
+    public RepositoryItemWriter<Article> createArticleRepositoryWriter() {
+        return new RepositoryItemWriterBuilder<Article>()
+                .repository(articleRepository)
+                .build();
     }
 }
