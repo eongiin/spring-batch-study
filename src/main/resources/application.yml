@@ -1,9 +1,16 @@
 spring:
   datasource:
-    url: jdbc:mysql://localhost:3305/demo?rewriteBatchedStatements=true
-    username: root
-    password: 1234
-    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      batch:
+        jdbc-url: jdbc:mysql://localhost:3305/batch
+        driver-class-name: com.mysql.cj.jdbc.Driver
+        username: root
+        password: 1234
+      demo:
+        jdbc-url: jdbc:mysql://localhost:3305/demo?rewriteBatchedStatements=true
+        driver-class-name: com.mysql.cj.jdbc.Driver
+        username: root
+        password: 1234
   batch:
     jdbc:
       initialize-schema: always
