@@ -76,7 +76,8 @@ public class CreateArticleJobConfig {
     public FlatFileItemReader<ArticleModel> createArticleReader() {
         return new FlatFileItemReaderBuilder<ArticleModel>()
                 .name("createArticleReader")
-                .resource(new ClassPathResource(createArticleJobParam.getName()))
+//                .resource(new ClassPathResource(createArticleJobParam.getName()))
+                .resource(new ClassPathResource("Articles.csv"))
                 .delimited()
                 .names("title", "content")
                 .fieldSetMapper(new BeanWrapperFieldSetMapper<>())
