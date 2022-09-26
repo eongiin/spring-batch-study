@@ -10,23 +10,17 @@ import org.springframework.batch.core.Step;
 import org.springframework.batch.core.configuration.annotation.JobBuilderFactory;
 import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
 import org.springframework.batch.core.configuration.annotation.StepScope;
-import org.springframework.batch.core.partition.support.Partitioner;
-import org.springframework.batch.core.partition.support.TaskExecutorPartitionHandler;
-import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.ItemWriter;
 import org.springframework.batch.item.data.RepositoryItemReader;
 import org.springframework.batch.item.data.builder.RepositoryItemReaderBuilder;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.domain.Sort;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 import java.time.LocalDateTime;
-import java.util.HashMap;
 import java.util.Map;
 
 @Configuration
@@ -56,71 +50,15 @@ public class CreateOddBoardJobConfig {
     @Bean
     public Job createOddBoardJob() {
         return jobBuilderFactory.get("createOddBoardJob")
-                .start(createOddBoardManager())
+                .start(createOddBoardStep())
                 .build();
     }
 
     @Bean
-    public Step createOddBoardManager() {
-        return stepBuilderFactory.get("createOddBoardManager")
-                .partitioner("creaateOddBoardPartitioner", createOddBoardPartitioner())
-                .partitionHandler(createOddBoardPartitionHandler())
-                .build();
-    }
-
-    @Bean
-    @StepScope
-    public Partitioner createOddBoardPartitioner() {
-        return gridSize -> {
-            long min = createOddBoardJobParam.getMinId();
-            long max = createOddBoardJobParam.getMaxId();
-            long targetSize = (max - min) / gridSize + 1;
-
-            Map<String, ExecutionContext> result = new HashMap<>();
-            int number = 0;
-            long start = min;
-            long end = start + targetSize - 1;
-
-            while (start <= max) {
-                ExecutionContext value = new ExecutionContext();
-                result.put("partition" + number, value);
-
-                if (end >= max) {
-                    end = max;
-                }
-                value.putLong("minValue", start);
-                value.putLong("maxValue", end);
-                start += targetSize;
-                end += targetSize;
-                number++;
-            }
-
-            return result;
-        };
-    }
-
-    public TaskExecutorPartitionHandler createOddBoardPartitionHandler() {
-        TaskExecutorPartitionHandler partitionHandler = new TaskExecutorPartitionHandler();
-        partitionHandler.setStep(createOddBoardWorker());
-        partitionHandler.setGridSize(GRID_SIZE);
-        partitionHandler.setTaskExecutor(createOddBoardTaskExecutor());
-        return partitionHandler;
-    }
-
-    public ThreadPoolTaskExecutor createOddBoardTaskExecutor() {
-        ThreadPoolTaskExecutor taskExecutor = new ThreadPoolTaskExecutor();
-        taskExecutor.setCorePoolSize(POOL_SIZE);
-        taskExecutor.setMaxPoolSize(POOL_SIZE);
-        taskExecutor.setWaitForTasksToCompleteOnShutdown(true);
-        taskExecutor.initialize();
-        return taskExecutor;
-    }
-
-    @Bean
-    public Step createOddBoardWorker() {
-        return stepBuilderFactory.get("createOddBoardWorker")
+    public Step createOddBoardStep() {
+        return stepBuilderFactory.get("createOddBoardStep")
                 .<Board, OddBoard>chunk(CHUNK_SIZE)
-                .reader(createOddBoardReader(null, null))
+                .reader(createOddBoardReader())
                 .processor(createOddBoardProcessor())
                 .writer(createOddBoardWriter())
                 .build();
@@ -128,15 +66,13 @@ public class CreateOddBoardJobConfig {
 
     @Bean
     @StepScope
-    public RepositoryItemReader<Board> createOddBoardReader(
-            @Value("#{stepExecutionContext[minValue]}") Long minValue,
-            @Value("#{stepExecutionContext[maxValue]}") Long maxValue
-    ) {
+    public RepositoryItemReader<Board> createOddBoardReader() {
         return new RepositoryItemReaderBuilder<Board>()
                 .name("createBoardReader")
                 .repository(boardRepository)
                 .methodName("findAllByIdBetween")
-                .arguments(minValue, maxValue)
+                .arguments(createOddBoardJobParam.getMinId(),
+                        createOddBoardJobParam.getMaxId())
                 .pageSize(CHUNK_SIZE)
                 .sorts(Map.of("id", Sort.Direction.ASC))
                 .build();
