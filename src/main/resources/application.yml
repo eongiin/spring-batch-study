@@ -15,7 +15,7 @@ spring:
     jdbc:
       initialize-schema: always
     job:
-      names: ${job.name:createBoardJob}
+      names: ${job.name:NONE}
   jpa:
     generate-ddl: true
     hibernate:
